@@ -2,6 +2,7 @@ package hugh
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 
@@ -81,6 +82,24 @@ func TestDiscover(t *testing.T) {
 			assertBridges(t, got, tt.bridges)
 		})
 	}
+
+	t.Run("Test error is returned on mDNS browse failure", func(t *testing.T) {
+		expectedError := errors.New("Simulated failure")
+
+		api := NewTestAPI(func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
+			return expectedError
+		})
+
+		got, err := api.Discover()
+
+		if got != nil {
+			t.Errorf("Expected nil for bridges but got %v", got)
+		}
+
+		if err != expectedError {
+			t.Errorf("Expected %v but got %v", expectedError, err)
+		}
+	})
 }
 
 func assertBridges(t *testing.T, got, want []Bridge) {

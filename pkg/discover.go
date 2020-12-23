@@ -68,7 +68,7 @@ func (api *API) Discover() ([]Bridge, error) {
 	defer cancel()
 	err := api.Browser.Browse(ctx, "_hue._tcp", "local", entries)
 	if err != nil {
-		log.Fatalln("Failed to browse:", err.Error())
+		return nil, err
 	}
 
 	<-ctx.Done()
