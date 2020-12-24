@@ -1,14 +1,36 @@
-package hugh
+package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/grandcat/zeroconf"
 )
+
+var ErrShouldNotBeCalled = errors.New("Function called unexpectedly")
+
+type RoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func DefaultRoundTrip(*http.Request) (*http.Response, error) {
+	return nil, ErrShouldNotBeCalled
+}
+
+func NewTestClient(fn RoundTripFunc) *http.Client {
+	return &http.Client{
+		Transport: RoundTripFunc(fn),
+	}
+}
 
 type BrowseFunc func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error
 
@@ -16,9 +38,14 @@ func (f BrowseFunc) Browse(ctx context.Context, service, domain string, entries 
 	return f(ctx, service, domain, entries)
 }
 
-func NewTestAPI(fn BrowseFunc) *API {
+func DefaultBrowse(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
+	return ErrShouldNotBeCalled
+}
+
+func NewTestAPI(transportFn RoundTripFunc, browseFn BrowseFunc) *API {
 	return &API{
-		Browser:        BrowseFunc(fn),
+		Browser:        BrowseFunc(browseFn),
+		Client:         *NewTestClient(transportFn),
 		TimeoutSeconds: 1,
 	}
 }
@@ -67,7 +94,7 @@ func TestDiscover(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			api := NewTestAPI(func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
+			api := NewTestAPI(RoundTripFunc(DefaultRoundTrip), func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
 				for _, data := range tt.bridgeData {
 					entries <- &zeroconf.ServiceEntry{
 						Text:     []string{data.text},
@@ -77,7 +104,11 @@ func TestDiscover(t *testing.T) {
 				return nil
 			})
 
-			got, _ := api.Discover()
+			got, err := api.Discover()
+
+			if err != nil {
+				t.Errorf("Expected no error but got %v", err)
+			}
 
 			assertBridges(t, got, tt.bridges)
 		})
@@ -86,7 +117,7 @@ func TestDiscover(t *testing.T) {
 	t.Run("Test error is returned on mDNS browse failure", func(t *testing.T) {
 		expectedError := errors.New("Simulated failure")
 
-		api := NewTestAPI(func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
+		api := NewTestAPI(DefaultRoundTrip, func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
 			return expectedError
 		})
 
@@ -98,6 +129,43 @@ func TestDiscover(t *testing.T) {
 
 		if err != expectedError {
 			t.Errorf("Expected %v but got %v", expectedError, err)
+		}
+	})
+}
+
+func testConnect(t *testing.T) {
+	t.Run("Test associating with Hue Bridge fails", func(t *testing.T) {
+		api := NewTestAPI(func(*http.Request) (*http.Response, error) {
+			mockData := ConnectResponse{
+				Error: ConnectError{
+					Type:        101,
+					Description: "link button not pressed",
+				},
+			}
+
+			payload, err := json.Marshal(mockData)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewReader(payload)),
+			}, nil
+		}, DefaultBrowse)
+
+		bridge := Bridge{
+			IP: []byte{127, 0, 0, 1},
+		}
+
+		username, err := api.Connect(bridge)
+
+		if username != "" {
+			t.Errorf("Expected no username to be returned but got %s", username)
+		}
+
+		if err == nil {
+			t.Error("Expected an error to have been returned")
 		}
 	})
 }
