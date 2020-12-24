@@ -3,8 +3,8 @@ package api
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -136,21 +136,11 @@ func TestDiscover(t *testing.T) {
 func testConnect(t *testing.T) {
 	t.Run("Test associating with Hue Bridge fails", func(t *testing.T) {
 		api := NewTestAPI(func(*http.Request) (*http.Response, error) {
-			mockData := ConnectResponse{
-				Error: ConnectError{
-					Type:        101,
-					Description: "link button not pressed",
-				},
-			}
-
-			payload, err := json.Marshal(mockData)
-			if err != nil {
-				t.Fatal(err)
-			}
+			json := `[{"error": {"type": 101, "address: "", "description": ""}}]`
 
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewReader(payload)),
+				Body:       ioutil.NopCloser(bytes.NewReader([]byte(json))),
 			}, nil
 		}, DefaultBrowse)
 
@@ -166,6 +156,33 @@ func testConnect(t *testing.T) {
 
 		if err == nil {
 			t.Error("Expected an error to have been returned")
+		}
+	})
+
+	t.Run("Test associating with Hue Bridge is successful", func(t *testing.T) {
+		expected_username := "testUser"
+
+		api := NewTestAPI(func(*http.Request) (*http.Response, error) {
+			json := fmt.Sprintf(`[{"success": {"username": "%s"}}]`, expected_username)
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewReader([]byte(json))),
+			}, nil
+		}, DefaultBrowse)
+
+		bridge := Bridge{
+			IP: []byte{127, 0, 0, 1},
+		}
+
+		username, err := api.Connect(bridge)
+
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		if username != expected_username {
+			t.Errorf("Expected username to be %s but got %s", expected_username, username)
 		}
 	})
 }
