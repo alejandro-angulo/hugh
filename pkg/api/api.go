@@ -66,10 +66,7 @@ var ErrBodyLengthTooLong = errors.New("Response body length longer than expected
 func parseServiceEntryText(entry *zeroconf.ServiceEntry) map[string]string {
 	var data = map[string]string{}
 
-	text := entry.Text[0]
-	records := strings.Fields(text[1 : len(text)-1])
-
-	for _, record := range records {
+	for _, record := range entry.Text {
 		rawData := strings.Split(record, "=")
 		data[rawData[0]] = rawData[1]
 	}
@@ -86,13 +83,15 @@ func (api *API) Discover() ([]Bridge, error) {
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
 			textData := parseServiceEntryText(entry)
-			bridges = append(bridges, Bridge{
+			newBridge := Bridge{
 				ID:    textData["bridgeid"],
 				Model: textData["modelid"],
 				IP:    entry.AddrIPv4[0], // Assume first item in slice is what we want
-			})
+
+			}
+			bridges = append(bridges, newBridge)
+			fmt.Printf("Found Hue bridge at %s (ID: `%s` Model: `%s`)\n", newBridge.IP.String(), newBridge.ID, newBridge.Model)
 		}
-		log.Println("No more entries.")
 	}(entries)
 
 	waitTime := time.Second * time.Duration(api.TimeoutSeconds)

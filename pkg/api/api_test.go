@@ -51,7 +51,7 @@ func NewTestAPI(transportFn RoundTripFunc, browseFn BrowseFunc) *API {
 }
 
 type testData struct {
-	text string
+	text []string
 	IP   []byte
 }
 
@@ -77,11 +77,11 @@ func TestDiscover(t *testing.T) {
 			},
 			bridgeData: []testData{
 				testData{
-					text: "[bridgeid=test modelid=foo]",
+					text: []string{"bridgeid=test", "modelid=foo"},
 					IP:   []byte{127, 0, 0, 1},
 				},
 				testData{
-					text: "[bridgeid=foobar modelid=bar]",
+					text: []string{"bridgeid=foobar", "modelid=bar"},
 					IP:   []byte{192, 168, 1, 66},
 				},
 			},
@@ -94,15 +94,18 @@ func TestDiscover(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			api := NewTestAPI(RoundTripFunc(DefaultRoundTrip), func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
-				for _, data := range tt.bridgeData {
-					entries <- &zeroconf.ServiceEntry{
-						Text:     []string{data.text},
-						AddrIPv4: []net.IP{data.IP},
+			api := NewTestAPI(
+				RoundTripFunc(DefaultRoundTrip),
+				func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
+					for _, data := range tt.bridgeData {
+						entries <- &zeroconf.ServiceEntry{
+							Text:     data.text,
+							AddrIPv4: []net.IP{data.IP},
+						}
 					}
-				}
-				return nil
-			})
+					return nil
+				},
+			)
 
 			got, err := api.Discover()
 
@@ -117,9 +120,12 @@ func TestDiscover(t *testing.T) {
 	t.Run("Test error is returned on mDNS browse failure", func(t *testing.T) {
 		expectedError := errors.New("Simulated failure")
 
-		api := NewTestAPI(DefaultRoundTrip, func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
-			return expectedError
-		})
+		api := NewTestAPI(
+			DefaultRoundTrip,
+			func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
+				return expectedError
+			},
+		)
 
 		got, err := api.Discover()
 
@@ -160,10 +166,10 @@ func testConnect(t *testing.T) {
 	})
 
 	t.Run("Test associating with Hue Bridge is successful", func(t *testing.T) {
-		expected_username := "testUser"
+		expectedUsername := "testUser"
 
 		api := NewTestAPI(func(*http.Request) (*http.Response, error) {
-			json := fmt.Sprintf(`[{"success": {"username": "%s"}}]`, expected_username)
+			json := fmt.Sprintf(`[{"success": {"username": "%s"}}]`, expectedUsername)
 
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -181,8 +187,8 @@ func testConnect(t *testing.T) {
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		if username != expected_username {
-			t.Errorf("Expected username to be %s but got %s", expected_username, username)
+		if username != expectedUsername {
+			t.Errorf("Expected username to be %s but got %s", expectedUsername, username)
 		}
 	})
 }
