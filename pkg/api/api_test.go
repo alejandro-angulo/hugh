@@ -190,10 +190,15 @@ func testConnect(t *testing.T) {
 		if username != expectedUsername {
 			t.Errorf("Expected username to be %s but got %s", expectedUsername, username)
 		}
+
+		if username != bridge.Username {
+			t.Errorf("Bridge username was not correctly updated. Saw %s but got %s", bridge.Username, username)
+		}
 	})
 }
 
 func assertBridges(t *testing.T, got, want []Bridge) {
+	t.Helper()
 
 	numGot := len(got)
 	numWant := len(want)
@@ -205,7 +210,7 @@ func assertBridges(t *testing.T, got, want []Bridge) {
 	for i, actualBridge := range got {
 		expectedBridge := want[i]
 		if !cmp.Equal(actualBridge, expectedBridge) {
-			t.Errorf("Bridge #%d mismatch, got %q want %q", i, actualBridge, expectedBridge)
+			t.Errorf("Bridge #%d mismatch, got %v want %v", i, actualBridge, expectedBridge)
 		}
 	}
 }

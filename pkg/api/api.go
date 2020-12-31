@@ -32,6 +32,8 @@ type API struct {
 
 	// The number of seconds to wait for a Hue Bridge to be discovered
 	TimeoutSeconds int
+
+	// TODO: Keep a slice of (pointers to) Bridges?
 }
 
 // ConnectError represents the error dictionary from the Connect response
@@ -57,6 +59,9 @@ type Bridge struct {
 	ID    string `json:"id"`
 	Model string `json:"model"`
 	IP    net.IP `json:"internalipaddress"` // TODO: Store v4 and v6 IPs as separate attributes?
+
+	// The username to use when communicating with this brige
+	Username string `json:"-"`
 }
 
 // ErrBodyLengthTooLong is returned when the API's body is longer than expected
@@ -108,7 +113,7 @@ func (api *API) Discover() ([]Bridge, error) {
 }
 
 // Connect associates with a Phillips Hue Bridge
-// Returns the user ID if sucessful
+// Returns the user ID  and sets the Bridge's Username attribute if sucessful
 func (api *API) Connect(bridge Bridge) (string, error) {
 	url := fmt.Sprintf("http://%s/api", bridge.IP.String())
 
@@ -152,6 +157,8 @@ func (api *API) Connect(bridge Bridge) (string, error) {
 			respData.Error.Description,
 		)
 	}
+
+	bridge.Username = respData.Success.Username
 
 	return respData.Success.Username, nil
 }
