@@ -177,6 +177,54 @@ func TestGetLights(t *testing.T) {
 	}
 }
 
+func TestToggleLight(t *testing.T) {
+	api := NewTestAPI(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+		}, nil
+	}, DefaultBrowse)
+
+	bridge := Bridge{
+		IP:  []byte{127, 0, 0, 1},
+		API: api,
+	}
+
+	tests := []struct {
+		name  string
+		light Light
+	}{
+		{
+			name: "Test turning light on",
+			light: Light{
+				Bridge: &bridge,
+				State:  LightState{On: true},
+			},
+		},
+		{
+			name: "Test turning light off",
+			light: Light{
+				Bridge: &bridge,
+				State:  LightState{On: false},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(*testing.T) {
+			initialOn := tt.light.State.On
+
+			err := tt.light.ToggleLight()
+			if err != nil {
+				t.Errorf("Expected no error but got %v", err)
+			}
+
+			if tt.light.State.On == initialOn {
+				t.Errorf("Light's on attribute was not updated. Expected %t but got %t", !initialOn, tt.light.State.On)
+			}
+		})
+	}
+}
+
 func assertLights(t *testing.T, got, want []Light) {
 	t.Helper()
 

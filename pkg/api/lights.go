@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -145,4 +147,32 @@ func (bridge *Bridge) GetLights() ([]Light, error) {
 	}
 
 	return lights, nil
+}
+
+// ToggleLight turns a lit light off and an unlit light on
+// The state sent to the bridge depends on the light object's `On` attribute.
+func (light *Light) ToggleLight() error {
+	url := fmt.Sprintf("http://%s/api/%s/lights/%s/state", light.Bridge.IP, light.Bridge.Username, light.ID)
+
+	newOnState := !light.State.On
+	payload, err := json.Marshal(map[string]bool{"on": newOnState})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(payload))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := light.Bridge.API.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	light.State.On = newOnState
+
+	return nil
 }
