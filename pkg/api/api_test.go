@@ -151,10 +151,11 @@ func testConnect(t *testing.T) {
 		}, DefaultBrowse)
 
 		bridge := Bridge{
-			IP: []byte{127, 0, 0, 1},
+			IP:  []byte{127, 0, 0, 1},
+			API: api,
 		}
 
-		username, err := api.Connect(bridge)
+		username, err := bridge.Connect()
 
 		if username != "" {
 			t.Errorf("Expected no username to be returned but got %s", username)
@@ -178,10 +179,11 @@ func testConnect(t *testing.T) {
 		}, DefaultBrowse)
 
 		bridge := Bridge{
-			IP: []byte{127, 0, 0, 1},
+			IP:  []byte{127, 0, 0, 1},
+			API: api,
 		}
 
-		username, err := api.Connect(bridge)
+		username, err := bridge.Connect()
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)

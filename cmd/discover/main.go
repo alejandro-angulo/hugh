@@ -65,7 +65,7 @@ func main() {
 	fmt.Println("Press the Enter Key when ready...")
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
-	username, err := apiObj.Connect(bridge)
+	username, err := bridge.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}

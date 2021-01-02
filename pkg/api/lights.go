@@ -117,15 +117,18 @@ type Light struct {
 	Config       LightConfig       `json:"config"`
 	UID          string            `json:"uniqueid"`
 	SWVersion    string            `json:"swversion"`
+	ID           string            `json:"-"`
+	Bridge       *Bridge           `json:"-"`
 }
 
 // GetLights retrieves all the lights on a certain bridge
-func (api *API) GetLights(bridge Bridge) ([]Light, error) {
+func (bridge *Bridge) GetLights() ([]Light, error) {
 	url := fmt.Sprintf("http://%s/api/%s/lights", bridge.IP, bridge.Username)
-	resp, err := api.Client.Get(url)
+	resp, err := bridge.API.Client.Get(url)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var data map[string]Light
 	err = json.NewDecoder(resp.Body).Decode(&data)
@@ -135,7 +138,9 @@ func (api *API) GetLights(bridge Bridge) ([]Light, error) {
 
 	lights := []Light{}
 
-	for _, light := range data {
+	for id, light := range data {
+		light.ID = id
+		light.Bridge = bridge
 		lights = append(lights, light)
 	}
 

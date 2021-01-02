@@ -35,17 +35,18 @@ func main() {
 		Timeout: time.Duration(flagTimeoutSeconds) * time.Second,
 	}
 
-	bridge := api.Bridge{
-		IP:       IP,
-		Username: flagUsername,
-	}
-
 	apiObj := api.API{
 		Client:         client,
 		TimeoutSeconds: flagTimeoutSeconds,
 	}
 
-	lights, err := apiObj.GetLights(bridge)
+	bridge := api.Bridge{
+		IP:       IP,
+		Username: flagUsername,
+		API:      &apiObj,
+	}
+
+	lights, err := bridge.GetLights()
 	if err != nil {
 		log.Fatal(err)
 	}

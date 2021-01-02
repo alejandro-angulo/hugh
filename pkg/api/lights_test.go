@@ -76,6 +76,7 @@ func TestGetLights(t *testing.T) {
 					},
 					UID:       "00:17:88:01:00:bd:c7:b9-0b",
 					SWVersion: "5.105.0.21169",
+					ID:        "1",
 				},
 			},
 			lightData: `{
@@ -156,9 +157,12 @@ func TestGetLights(t *testing.T) {
 				}, nil
 			}, DefaultBrowse)
 
-			bridge := Bridge{IP: []byte{127, 0, 0, 1}}
+			bridge := Bridge{
+				IP:  []byte{127, 0, 0, 1},
+				API: api,
+			}
 
-			lights, err := api.GetLights(bridge)
+			lights, err := bridge.GetLights()
 			if err != nil {
 				t.Errorf("Expected no error but got %v", err)
 			}

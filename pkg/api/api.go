@@ -56,6 +56,7 @@ type ConnectResponse struct {
 
 // Bridge represents a Phillips Hue bridge
 type Bridge struct {
+	API   *API   `json:"-"`
 	ID    string `json:"id"`
 	Model string `json:"model"`
 	IP    net.IP `json:"internalipaddress"` // TODO: Store v4 and v6 IPs as separate attributes?
@@ -89,6 +90,7 @@ func (api *API) Discover() ([]Bridge, error) {
 		for entry := range results {
 			textData := parseServiceEntryText(entry)
 			newBridge := Bridge{
+				API:   api,
 				ID:    textData["bridgeid"],
 				Model: textData["modelid"],
 				IP:    entry.AddrIPv4[0], // Assume first item in slice is what we want
@@ -114,7 +116,7 @@ func (api *API) Discover() ([]Bridge, error) {
 
 // Connect associates with a Phillips Hue Bridge
 // Returns the user ID  and sets the Bridge's Username attribute if sucessful
-func (api *API) Connect(bridge Bridge) (string, error) {
+func (bridge *Bridge) Connect() (string, error) {
 	url := fmt.Sprintf("http://%s/api", bridge.IP.String())
 
 	hostname, err := os.Hostname()
@@ -129,7 +131,7 @@ func (api *API) Connect(bridge Bridge) (string, error) {
 		return "", err
 	}
 
-	resp, err := api.Client.Post(url, "application/json", bytes.NewBuffer(payload))
+	resp, err := bridge.API.Client.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		return "", err
 	}
