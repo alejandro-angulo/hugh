@@ -36,8 +36,8 @@ type API struct {
 	// TODO: Keep a slice of (pointers to) Bridges?
 }
 
-// ConnectError represents the error dictionary from the Connect response
-type ConnectError struct {
+// APIError represents the error dictionary from the Connect response
+type APIError struct {
 	Type        int    `json:"type"`
 	Address     string `json:"address"`
 	Description string `json:"description"`
@@ -50,7 +50,7 @@ type ConnectSuccess struct {
 
 // ConnectResponse represents the API's response structure
 type ConnectResponse struct {
-	Error   ConnectError   `json:"error"`
+	Error   APIError       `json:"error"`
 	Success ConnectSuccess `json:"success"`
 }
 

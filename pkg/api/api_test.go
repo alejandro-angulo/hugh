@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -17,6 +19,10 @@ import (
 var ErrShouldNotBeCalled = errors.New("Function called unexpectedly")
 
 type RoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (x RoundTripFunc) Equal(y RoundTripFunc) bool {
+	return reflect.ValueOf(x).Pointer() == reflect.ValueOf(y).Pointer()
+}
 
 func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
@@ -33,6 +39,10 @@ func NewTestClient(fn RoundTripFunc) *http.Client {
 }
 
 type BrowseFunc func(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error
+
+func (x BrowseFunc) Equal(y BrowseFunc) bool {
+	return reflect.ValueOf(x).Pointer() == reflect.ValueOf(y).Pointer()
+}
 
 func (f BrowseFunc) Browse(ctx context.Context, service, domain string, entries chan<- *zeroconf.ServiceEntry) error {
 	return f(ctx, service, domain, entries)
@@ -106,6 +116,10 @@ func TestDiscover(t *testing.T) {
 					return nil
 				},
 			)
+
+			for i := range tt.bridges {
+				tt.bridges[i].API = api
+			}
 
 			got, err := api.Discover()
 
@@ -211,8 +225,11 @@ func assertBridges(t *testing.T, got, want []Bridge) {
 
 	for i, actualBridge := range got {
 		expectedBridge := want[i]
-		if !cmp.Equal(actualBridge, expectedBridge) {
-			t.Errorf("Bridge #%d mismatch, got %v want %v", i, actualBridge, expectedBridge)
+
+		diff := cmp.Diff(actualBridge, expectedBridge)
+		if diff != "" {
+			log.Println(diff)
+			t.Errorf("Bridge #%d mismatch", i)
 		}
 	}
 }

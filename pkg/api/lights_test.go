@@ -77,6 +77,7 @@ func TestGetLights(t *testing.T) {
 					UID:       "00:17:88:01:00:bd:c7:b9-0b",
 					SWVersion: "5.105.0.21169",
 					ID:        "1",
+					// Bridge: Set in test since this is dynamically created
 				},
 			},
 			lightData: `{
@@ -162,12 +163,15 @@ func TestGetLights(t *testing.T) {
 				API: api,
 			}
 
+			for i := range tt.lights {
+				tt.lights[i].Bridge = &bridge
+			}
+
 			lights, err := bridge.GetLights()
 			if err != nil {
 				t.Errorf("Expected no error but got %v", err)
 			}
 
-			log.Println("hello")
 			assertLights(t, lights, tt.lights)
 		})
 	}
@@ -190,9 +194,6 @@ func assertLights(t *testing.T, got, want []Light) {
 		if diff != "" {
 			log.Println(diff)
 			t.Errorf("Light #%d mismatch", i)
-		}
-
-		if !cmp.Equal(actualLight, expectedLight) {
 		}
 	}
 }
