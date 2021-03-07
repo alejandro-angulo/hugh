@@ -85,13 +85,13 @@ func finder(app *tview.Application, lights []api.Light) {
 		return
 	}
 
-	addLightToList := func(i int, light api.Light) {
+	addLightToList := func(light api.Light) {
 		lightsList.AddItem(light.Name, "", 0, func() {
 			lightInfo.Clear()
 
 			lightInfo.AddItem("Active", getLightStatus(&light), 'a', func() {
 				light.ToggleLight()
-				lightInfo.SetItemText(i, "Active", getLightStatus(&light))
+				lightInfo.SetItemText(0, "Active", getLightStatus(&light))
 			})
 
 			lightInfo.AddItem("Brightness", fmt.Sprintf("%v", light.State.Brightness), 'b', nil)
@@ -102,47 +102,11 @@ func finder(app *tview.Application, lights []api.Light) {
 		})
 	}
 
-	for i, light := range lights {
-		addLightToList(i, light)
+	for _, light := range lights {
+		addLightToList(light)
 	}
 
 	pages := tview.NewPages().
 		AddPage("someName", flex, true, true)
 	app.SetRoot(pages, true)
-
-	//root := tview.NewTreeNode("Lights")
-	//tree := tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
-
-	//for _, light := range lights {
-	//// fmt.Printf("[%d] %s\n", i, light.Name)
-	//lightNode := tview.NewTreeNode(light.Name).SetReference(light).SetSelectable(true).SetExpanded(false)
-
-	//lightStatus := getLightStatus(&light)
-	//lightStatusNode := tview.NewTreeNode(lightStatus).SetReference(light)
-	//lightStatusNode.SetSelectedFunc(func() {
-	////light := node.GetReference()
-	//// TODO: handle exceptional case when light is none
-	//light.ToggleLight()
-	//lightStatusNode.SetText(getLightStatus(&light))
-	//})
-	//lightNode.AddChild(lightStatusNode)
-
-	//root.AddChild(lightNode)
-	//}
-
-	//tree.SetSelectedFunc(func(node *tview.TreeNode) {
-	//light := node.GetReference()
-	//if light == nil {
-	//return
-	//} else {
-	//node.SetExpanded(!node.IsExpanded())
-	//}
-
-	////children := node.GetChildren()
-	////if len(children) == 0 {
-	////// Toggle expanded
-	////node.SetExpanded(!node.IsExpanded())
-	////} else {
-	////}
-	//})
 }
